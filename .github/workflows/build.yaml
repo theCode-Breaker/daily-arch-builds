@@ -4,7 +4,14 @@ on:
   schedule:
     - cron: "0 0 * * *"
   workflow_dispatch:
-
+    inputs:
+      dev:
+        description: "Run as development?"
+        type: boolean
+        required: true
+        default: false
+        
+        
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -27,9 +34,17 @@ jobs:
         run: bash build-iso
         env:
           DATE: ${{ env.DATE }}
+          
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dev == 'true' }}
+        with:
+          name: Arch Linux ${{ env.DATE }}
+          path: "archlinux-${{ env.DATE }}-x86_64.iso"
 
       - name: Create tag and release
         uses: ncipollo/release-action@v1
+        if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.dev == 'false') }}
         with:
           name: Arch Linux ${{ env.DATE }}
           tag: ${{ env.DATE }}
