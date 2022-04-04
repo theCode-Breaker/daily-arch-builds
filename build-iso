@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+
+# .zprofile file
+ZPROFILE="/tmp/$DATE/airootfs/root/.zprofile"
+
+# ANSI escapes
+RED=$(printf '\033[31m')
+GREEN=$(printf '\033[32m')
+BOLD=$(printf '\033[1m')
+ITALIC=$(printf '\033[3m')
+STRIKETHROUGH=$(printf '\033[9m')
+RESET=$(printf '\033[0m')
+
+print() {
+  printf -- "%s\n" "$1"
+}
+
+step() {
+  COLS=$(tput -T xterm-256color cols)
+  COLS_HALF=$((COLS / 2))
+
+  print "${BOLD}$1${RESET}" &&
+    eval "$2" | while read -r line; do printf -- "%s\r" "$line"; done
+
+  if [ "${PIPESTATUS[0]}" -gt 0 ]; then
+    print "${RED}${ITALIC}${STRIKETHROUGH}$1${RESET}${RED} error!${RESET}" &&
+      exit 1
+  else
+    print "${GREEN}${ITALIC}${STRIKETHROUGH}$1${RESET}${GREEN} done!${RESET}"
+  fi
+
+  printf "${BOLD}=%.0s" $(seq $COLS_HALF)
+  print "$RESET"
+}
+
+build() {
+  step "Creating build directory..." "mkdir -p /tmp/$DATE/airootfs/root/"
+  step "Adding notes to .zprofile..." "
+    print '. /usr/share/makepkg/util/message.sh' >>$ZPROFILE
+    print 'colorize\n' >>$ZPROFILE
+    print 'msg \"This is an unofficial ISO created by GitHub Actions on $DATE from run ID $GITHUB_RUN_ID\"' >>$ZPROFILE
+    print 'msg2 \"Check $GITHUB_SERVER_URL/$GITHUB_REPOSITORY#readme for more details\"' >>$ZPROFILE
+  "
+  step "Updating packages and installing archiso..." "pacman -Syu --noconfirm archiso"
+  step "Copying releng profile to build directory..." "cp -r /usr/share/archiso/configs/releng/* /tmp/$DATE"
+  step "Building ISO..." "mkarchiso -v -w work/ -o ./ /tmp/$DATE"
+  step "Generating release Markdown file..." "
+    print '\`MD5:\` \`$(md5sum archlinux-"$DATE"-x86_64.iso)\`' >>RELEASE.md
+    print '\`SHA1:\` \`$(sha1sum archlinux-"$DATE"-x86_64.iso)\`' >>RELEASE.md
+  "
+}
+
+main() {
+  if [ -z ${DATE+x} ]; then
+    print "${RED}DATE variable not set!" &&
+      exit 1
+  else
+    build
+  fi
+}
+
+main
