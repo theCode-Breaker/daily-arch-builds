@@ -4,12 +4,6 @@ on:
   schedule:
     - cron: "0 0 * * *"
   workflow_dispatch:
-    inputs:
-      dev:
-        description: "Run as development?"
-        type: boolean
-        required: true
-        default: false
 
 jobs:
   build:
@@ -36,7 +30,6 @@ jobs:
 
       - name: Create tag and release
         uses: ncipollo/release-action@v1
-        if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.dev == 'false') }}
         with:
           name: Arch Linux ${{ env.DATE }}
           tag: ${{ env.DATE }}
