@@ -4,6 +4,12 @@ on:
   schedule:
     - cron: "0 0 * * *"
   workflow_dispatch:
+    inputs:
+      dev:
+        description: "Run as development?"
+        type: boolean
+        required: true
+        default: false
 
 jobs:
   build:
@@ -21,35 +27,16 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Set current date as environment variable
-        run: echo "DATE=`date +'%Y.%m.%d'`" >>$GITHUB_ENV
+        run: echo "DATE=$(date +'%Y.%m.%d')" >>$GITHUB_ENV
 
-      - name: Create temporary build directory
-        run: mkdir -p /tmp/$DATE/airootfs/root/
-
-      - name: Add notes to .zprofile
-        run: |
-          echo ". /usr/share/makepkg/util/message.sh"                                                            >>/tmp/$DATE/airootfs/root/.zprofile
-          echo -e "colorize\n"                                                                                   >>/tmp/$DATE/airootfs/root/.zprofile
-          echo "msg \"This is an unofficial ISO created by GitHub Actions on $DATE from run ID $GITHUB_RUN_ID\"" >>/tmp/$DATE/airootfs/root/.zprofile
-          echo "msg2 \"Check $GITHUB_SERVER_URL/$GITHUB_REPOSITORY#readme for more details\""                    >>/tmp/$DATE/airootfs/root/.zprofile
-          echo "echo \"\""                                                                                       >>/tmp/$DATE/airootfs/root/.zprofile
-
-      - name: Update packages and install archiso
-        run: pacman -Syu --noconfirm archiso
-
-      - name: Copy profile to build directory
-        run: cp -r /usr/share/archiso/configs/releng/* /tmp/$DATE
-
-      - name: Build ISO
-        run: mkarchiso -v -w work/ -o ./ /tmp/$DATE
-
-      - name: Generate release Markdown file
-        run: |
-          echo "\`MD5:\` \``md5sum archlinux-$DATE-x86_64.iso`\`"   >>RELEASE.md
-          echo "\`SHA1:\` \``sha1sum archlinux-$DATE-x86_64.iso`\`" >>RELEASE.md
+      - name: Run build-iso script
+        run: bash build-iso
+        env:
+          DATE: ${{ env.DATE }}
 
       - name: Create tag and release
         uses: ncipollo/release-action@v1
+        if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.dev == 'false') }}
         with:
           name: Arch Linux ${{ env.DATE }}
           tag: ${{ env.DATE }}
