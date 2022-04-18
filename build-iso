@@ -37,7 +37,7 @@ build() {
   step "Creating build directory..." "mkdir -p /tmp/$DATE/airootfs/root/"
   step "Adding notes to .zprofile..." "
     print '. /usr/share/makepkg/util/message.sh' >>$ZPROFILE
-    print 'colorize\n' >>$ZPROFILE
+    print 'colorize' >>$ZPROFILE
     print 'msg \"This is an unofficial ISO created by GitHub Actions on $DATE from run ID $GITHUB_RUN_ID\"' >>$ZPROFILE
     print 'msg2 \"Check $GITHUB_SERVER_URL/$GITHUB_REPOSITORY#readme for more details\"' >>$ZPROFILE
   "
