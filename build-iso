@@ -1,59 +1,72 @@
-#!/usr/bin/env bash
-
-# .zprofile file
-ZPROFILE="/tmp/$DATE/airootfs/root/.zprofile"
+#!/bin/bash
 
 # ANSI escapes
-RED=$(printf '\033[31m')
-GREEN=$(printf '\033[32m')
-BOLD=$(printf '\033[1m')
-ITALIC=$(printf '\033[3m')
-STRIKETHROUGH=$(printf '\033[9m')
-RESET=$(printf '\033[0m')
+RED='\033[31m'
+GREEN='\033[32m'
+BOLD='\033[1m'
+ITALIC='\033[3m'
+STRIKETHROUGH='\033[9m'
+RESET='\033[0m'
 
-print() {
-  printf -- "%s\n" "$1"
+# usage: repeat character number
+# example: repeat = 10
+# output: ==========
+repeat() {
+  for ((i = 1; i < $2; i++)); do
+    echo -n "$1"
+  done
 }
 
+# usage: step text command
+# example: step "echoing hey" "echo hey"
+# output:
+# echoing hey...
+# hey
+# echoing hey... done!
+# ====================
 step() {
-  COLS=$(tput -T xterm-256color cols)
-  COLS_HALF=$((COLS / 2))
-
-  print "${BOLD}$1${RESET}" &&
-    eval "$2" | while read -r line; do printf -- "%s\r" "$line"; done
+  echo -e "${BOLD}$1${RESET}" &&
+    eval "$2"
 
   if [ "${PIPESTATUS[0]}" -gt 0 ]; then
-    print "${RED}${ITALIC}${STRIKETHROUGH}$1${RESET}${RED} error!${RESET}" &&
+    echo -e "${RED}${ITALIC}${STRIKETHROUGH}$1${RESET}${RED} error!${RESET}" &&
       exit 1
   else
-    print "${GREEN}${ITALIC}${STRIKETHROUGH}$1${RESET}${GREEN} done!${RESET}"
+    TEXT="${GREEN}${ITALIC}${STRIKETHROUGH}$1${RESET}${GREEN} done!${RESET}"
+    echo -e "$TEXT"
   fi
 
-  printf "${BOLD}=%.0s" $(seq $COLS_HALF)
-  print "$RESET"
+  echo -e "${BOLD}$(repeat "=" "$(echo "$TEXT" | sed -E 's/\\033[^\\]*m//g' | wc -c)")${RESET}"
 }
 
 build() {
-  step "Creating build directory..." "mkdir -p /tmp/$DATE/airootfs/root/"
-  step "Adding notes to .zprofile..." "
-    print '. /usr/share/makepkg/util/message.sh' >>$ZPROFILE
-    print 'colorize' >>$ZPROFILE
-    print '' >>$ZPROFILE
-    print 'msg \"This is an unofficial ISO created by GitHub Actions on $DATE from run ID $GITHUB_RUN_ID\"' >>$ZPROFILE
-    print 'msg2 \"Check $GITHUB_SERVER_URL/$GITHUB_REPOSITORY#readme for more details\"' >>$ZPROFILE
+  step "Creating build directory..." "mkdir -p /tmp/isobuild/airootfs/root"
+  step "Adding notes to .zprofile file..." "
+		cat <<-EOL >>/tmp/isobuild/airootfs/root/.zprofile
+			. /usr/share/makepkg/util/message.sh
+			colorize
+			echo ''
+			msg \"This is an unofficial ISO created by GitHub Actions on $DATE from run ID $GITHUB_RUN_ID\"
+			msg2 \"Check $GITHUB_SERVER_URL/$GITHUB_REPOSITORY#readme for more details\"
+			echo ''
+		EOL
   "
   step "Updating packages and installing archiso..." "pacman -Syu --noconfirm archiso"
-  step "Copying releng profile to build directory..." "cp -r /usr/share/archiso/configs/releng/* /tmp/$DATE"
-  step "Building ISO..." "mkarchiso -v -w work/ -o ./ /tmp/$DATE"
-  step "Generating release Markdown file..." "
-    print '\`MD5:\` \`$(md5sum archlinux-"$DATE"-x86_64.iso)\`' >>RELEASE.md
-    print '\`SHA1:\` \`$(sha1sum archlinux-"$DATE"-x86_64.iso)\`' >>RELEASE.md
+  step "Copying releng profile to build directory..." "cp -r /usr/share/archiso/configs/releng/* /tmp/isobuild"
+  step "Building ISO..." "mkarchiso -v -w work/ -o ./ /tmp/isobuild"
+  step "Generating checksums text file..." "
+		cat <<-EOL >CHECKSUMS.txt
+			b2sum  $(b2sum "archlinux-$DATE-x86_64.iso")
+			md5sum  $(md5sum "archlinux-$DATE-x86_64.iso")
+			sha1sum  $(sha1sum "archlinux-$DATE-x86_64.iso")
+			sha256sum  $(sha256sum "archlinux-$DATE-x86_64.iso")
+		EOL
   "
 }
 
 main() {
   if [ -z ${DATE+x} ]; then
-    print "${RED}DATE variable not set!" &&
+    echo -e "${RED}DATE variable not set!${RESET}" &&
       exit 1
   else
     build
