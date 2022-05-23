@@ -2,11 +2,9 @@ name: ShellCheck
 
 on:
   push:
-    branches: [main]
     paths:
       - "build-iso"
   pull_request:
-    branches: [main]
     paths:
       - "build-iso"
 
