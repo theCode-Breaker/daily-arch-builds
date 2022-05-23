@@ -1,4 +1,4 @@
-name: Build Arch ISO
+name: Build Arch Linux ISO
 
 on:
   schedule:
@@ -10,8 +10,7 @@ on:
         type: boolean
         required: true
         default: false
-        
-        
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -32,23 +31,22 @@ jobs:
 
       - name: Run build-iso script
         run: bash build-iso
-        env:
-          DATE: ${{ env.DATE }}
-          
+
       - name: Upload artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dev == 'true' }}
         with:
           name: Arch Linux ${{ env.DATE }}
-          path: "archlinux-${{ env.DATE }}-x86_64.iso"
-
+          path: |
+            archlinux-${{ env.DATE }}-x86_64.iso
+            CHECKSUMS.txt
       - name: Create tag and release
-        uses: ncipollo/release-action@v1
+        uses: softprops/action-gh-release@v0.1.14
         if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.dev == 'false') }}
         with:
           name: Arch Linux ${{ env.DATE }}
-          tag: ${{ env.DATE }}
-          commit: main
-          bodyFile: RELEASE.md
-          artifacts: "archlinux-${{ env.DATE }}-x86_64.iso"
-          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ env.DATE }}
+          body_path: CHECKSUMS.txt
+          files: |
+            archlinux-${{ env.DATE }}-x86_64.iso
+            CHECKSUMS.txt
