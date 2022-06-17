@@ -45,6 +45,7 @@ build() {
 		cat <<-EOL >>/tmp/isobuild/airootfs/root/.zprofile
 			. /usr/share/makepkg/util/message.sh
 			colorize
+
 			echo ''
 			msg \"This is an unofficial ISO created by GitHub Actions on $DATE from run ID $GITHUB_RUN_ID\"
 			msg2 \"Check $GITHUB_SERVER_URL/$GITHUB_REPOSITORY#readme for more details\"
