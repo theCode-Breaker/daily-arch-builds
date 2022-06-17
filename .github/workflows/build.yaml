@@ -40,6 +40,7 @@ jobs:
           path: |
             archlinux-${{ env.DATE }}-x86_64.iso
             CHECKSUMS.txt
+
       - name: Create tag and release
         uses: softprops/action-gh-release@v0.1.14
         if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.dev == 'false') }}
